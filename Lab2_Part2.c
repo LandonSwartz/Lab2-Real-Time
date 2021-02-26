@@ -12,7 +12,6 @@ void main()
 	int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);	// returns a file descriptor
 	struct itimerspec itval;	// structure to hold period and starting time
 	
-	//Starting the real time part that is not taguht in lecture but we are expected to know with no direction or help except vague instructions during the beginning of the lab
 	// timer fires every ## sec, ## nsec
     	itval.it_interval.tv_sec = 5;		// check the data type
     	itval.it_interval.tv_nsec = 5;	// check the data type
