@@ -45,3 +45,4 @@ static void periodic_task_init(struct period_info *pinfo);
 static void periodic_task_init2(struct period_info *pinfo);
 static void periodic_task_init3(struct period_info *pinfo);
 static void inc_period(struct period_info *pinfo);
+void waitFor (unsigned int secs);

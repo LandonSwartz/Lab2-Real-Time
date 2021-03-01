@@ -20,28 +20,43 @@ void main()
 	int ret; //for return values
 	
 	struct sched_param param;
-   	
-	/*ret = sched_setscheduler(&threads[0], SCHED_FIFO, &param);	// this function has a return value
-	ret = sched_setscheduler(&threads[1], SCHED_FIFO, &param);	// this function has a return value
-	if(ret == -1)
+	struct itimerspec timerValue = 
 	{
-		printf("Error with scheduler\n");
-	}
-	ret = sched_setscheduler(&threads[2], SCHED_FIFO, &param);	// this function has a return value
-	if(ret == -1)
-	{
-		printf("Error with scheduler\n");
-	}*/
-   
+		{0,0}, //makes one off timer
+		{1,0}	//wait one second
+	};
+	
+  	 //creating timer
+	int timer = timerfd_create(CLOCK_REALTIME, 0);
+	if(timer == -1)
+		printf("timer failed to start\n");
+	
 	ret = pthread_create(&threads[0], NULL, threadFunction, (void*) argsFirst);
 	if(ret)
 	{
 		printf("create pthread failed horribly\n");
 		return;
 	}
+	
+	//timer for one sec	
+	//timerfd_settime(timer, 0, &timerValue, NULL);
+	printf("timer start for thread 1\n");
+	//waitFor(1); //waiting one second
 
-	ret = pthread_create(&threads[1], NULL, threadFunction2, (void*) argsSecond);
-   	ret = pthread_create(&threads[2], NULL, threadFunction3, (void*) argsThird);
+	
+	//next threads
+	ret = pthread_create(&threads[2], NULL, threadFunction3, (void*) argsThird);
+   	timerfd_settime(timer, 0, &timerValue, NULL);
+   	printf("timer start for thread 3\n");
+	waitFor(1); //waiting one second
+   	ret = pthread_create(&threads[1], NULL, threadFunction2, (void*) argsSecond);
+	//timerfd_settime(timer, 0, &timerValue, NULL);
+	printf("timer start for thread 2\n");
+	waitFor(1); //waiting one second
+
+   	
+   	
+   	//joing threads
    	ret = pthread_join(threads[0], NULL);
    	if(ret)
    		printf("join thread failed more horribly\n");
@@ -57,6 +72,11 @@ void main()
    	 pthread_exit(NULL); //causes program not to seg fault
 }
 
+void waitFor (unsigned int secs) {
+    unsigned int retTime = time(0) + secs;   // Get finishing time.
+    while (time(0) < retTime);               // Loop until it arrives.
+}
+
 //function of real periodic task
 void *threadFunction(void *args)
 {
@@ -64,7 +84,7 @@ void *threadFunction(void *args)
 	int ret = sched_setscheduler(pthread_self(), SCHED_FIFO, &param);	// this function has a return value
 	if(ret == -1)
 	{
-		printf("Error with scheduler\n");
+		//printf("Error with scheduler\n");
 	}
 	
 	struct Args* arg_funct = (struct Args*) args;
@@ -83,7 +103,7 @@ void *threadFunction(void *args)
    	while (1) {
                 readLine(file);
                 wait_rest_of_period(&pinfo);
-                printf("Test1\n");
+                //printf("Test1\n");
        }	
        
        return NULL;
@@ -96,7 +116,7 @@ void *threadFunction2(void *args)
 	int ret = sched_setscheduler(pthread_self(), SCHED_FIFO, &param);	// this function has a return value
 	if(ret == -1)
 	{
-		printf("Error with scheduler\n");
+		//printf("Error with scheduler\n");
 	}
 	struct Args* arg_funct = (struct Args*) args;
 	struct period_info pinfo;
@@ -114,7 +134,7 @@ void *threadFunction2(void *args)
    	while (1) {
                 readLine(file);
                 wait_rest_of_period(&pinfo);
-                printf("Test 2\n");
+                //printf("Test 2\n");
        }	
        
        return NULL;
@@ -132,8 +152,8 @@ static void wait_rest_of_period(struct period_info *pinfo)
 //initializing a periodic task
 static void periodic_task_init(struct period_info *pinfo)
 {
-        /* for simplicity, hardcoding a 1ms period */
-        pinfo->period_ns = 2000000000;
+        /* for simplicity, hardcoding a 3ms period */
+        pinfo->period_ns = 3000000000;
  
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
@@ -141,16 +161,16 @@ static void periodic_task_init(struct period_info *pinfo)
 //initializing a periodic task
 static void periodic_task_init2(struct period_info *pinfo)
 {
-        /* for simplicity, hardcoding a 1ms period */
-        pinfo->period_ns = 2000000000;
+        /* for simplicity, hardcoding a 3ms period */
+        pinfo->period_ns = 3000000000;
  
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
 
 static void periodic_task_init3(struct period_info *pinfo)
 {
-        /* for simplicity, hardcoding a 1ms period */
-        pinfo->period_ns = 3000000000;
+        /* for simplicity, hardcoding a 2ms period */
+        pinfo->period_ns = 2000000000;
  
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
@@ -161,7 +181,7 @@ void *threadFunction3(void *args)
 	int ret = sched_setscheduler(pthread_self(), SCHED_FIFO, &param);	// this function has a return value
 	if(ret == -1)
 	{
-		printf("Error with scheduler\n");
+		//printf("Error with scheduler\n");
 	}
 	struct Args* arg_funct = (struct Args*) args;
 	struct period_info pinfo;
@@ -172,7 +192,7 @@ void *threadFunction3(void *args)
                 buffer_to_global(args);
                 arg_funct->row++;
                 wait_rest_of_period(&pinfo);
-                printf("Test 3\n");
+                //printf("Test 3\n");
                 print(global);
        }	
        
