@@ -2,75 +2,169 @@
 
 #include "Lab2-Part2.h"
 
+int row = 0;
+
 void main()
 {
 	//allocating  args and thread 
-	struct Args *args = (struct Args*)malloc(sizeof(struct Args));
-	args->size = 128;
+	struct Args *argsFirst = (struct Args*)malloc(sizeof(struct Args));
+	struct Args *argsSecond = (struct Args*)malloc(sizeof(struct Args));
+	struct Args *argsThird = (struct Args*)malloc(sizeof(struct Args));
+	argsFirst->size = 128;
+	argsSecond->size = 128;
+	argsThird->size = 128;
+	argsThird->row = 0;
+	strcpy(argsFirst->filename, "first.txt");
+	strcpy(argsSecond->filename, "second.txt");
 	pthread_t threads[NUM_THREADS];	
+	int ret; //for return values
 	
-	int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);	// returns a file descriptor
-	struct itimerspec itval;	// structure to hold period and starting time
-	
-	// timer fires every ## sec, ## nsec
-    	itval.it_interval.tv_sec = 5;		// check the data type
-    	itval.it_interval.tv_nsec = 5;	// check the data type
-    	
-    	// Timer will start in ## sec, ## nsec from the moment the timer is started
-    	itval.it_value.tv_sec = 5;		// check the data type
-    	itval.it_value.tv_nsec = 5;		// check the data type
-    	
-    	timerfd_settime(timer_fd, 0, &itval, NULL);	// this function has a return value
-
-	//file ptrs
-	FILE *first_file = fopen("first.txt", "r");
-	if (first_file == NULL) {
-       		printf("Error: file pointer is null.");
-       		exit(1);
-   	}
-	FILE *second_file = fopen("second.txt", "r");
-	if (second_file == NULL) {
-       		printf("Error: file pointer is null.");
-       		exit(1);
-   	}
+	struct sched_param param;
    	
-   	int i = 0;
-   	
-   	struct sched_param param;
-   	
-   	// Declare ourself as a real time task by elevating our priority
-	// and setting an appropriate scheduling policy.
-	param.sched_priority = MY_PRIORITY;
-	sched_setscheduler(0, SCHED_FIFO, &param);	// this function has a return value
-		// Always good to check for errors. Look for sched_setscheduler()
+	ret = sched_setscheduler(threads[0], SCHED_FIFO, &param);	// this function has a return value
+	ret = sched_setscheduler(threads[1], SCHED_FIFO, &param);	// this function has a return value
+	ret = sched_setscheduler(&threads[2], SCHED_FIFO, &param);	// this function has a return value
+	if(ret == -1)
+	{
+		printf("Error with scheduler\n");
+	}
    
-   	 //reading from file
-   	 while(!feof(first_file))
-   	 {  	
-   	 	pthread_create(&threads[1], NULL, readLine, first_file);
-   	 	pthread_join(threads[1], NULL);
-   	 	args->row = i;
-   	 	pthread_create(&threads[3], NULL, buffer_to_global, (void *)args);
-   	 	pthread_join(threads[3], NULL);
-   	 	i++;
-   	 	pthread_create(&threads[2], NULL, readLine, second_file);
-   	 	pthread_join(threads[2], NULL);
-   	 	args->row = i;
-   	 	pthread_create(&threads[3], NULL, buffer_to_global, (void *)args);
-   	 	pthread_join(threads[3], NULL);
-   	 	i++;
-   	 }
+	ret = pthread_create(&threads[0], NULL, threadFunction, (void*) argsFirst);
+	if(ret)
+	{
+		printf("create pthread failed horribly\n");
+		return;
+	}
+	ret = pthread_create(&threads[2], NULL, threadFunction3, (void*) argsThird);
+	ret = pthread_create(&threads[1], NULL, threadFunction2, (void*) argsSecond);
+   	 
+   	ret = pthread_join(threads[0], NULL);
+   	if(ret)
+   		printf("join thread failed more horribly\n");
+   	pthread_join(threads[1], NULL);
+   	pthread_join(threads[2], NULL);
+
    	 
    	 //print result of global array
    	 print(global);
-   	 free(args); //free args
+   	 free(argsFirst); //free args
+   	 free(argsSecond);
+   	 free(argsThird);
    	 pthread_exit(NULL); //causes program not to seg fault
 }
 
-//reads line from file, for threads one and two
-void *readLine(void * fp)
+//function of real periodic task
+void *threadFunction(void *args)
 {
-	FILE * file = (FILE *)fp;
+	struct Args* arg_funct = (struct Args*) args;
+	struct period_info pinfo;
+	
+	periodic_task_init2(&pinfo);
+	
+	//opening file
+	printf("filename = %s\n", arg_funct->filename);
+	FILE *file = fopen(arg_funct->filename, "r");
+	if (file == NULL) {
+       		printf("Error: file pointer is null.");
+       		exit(1);
+   	}
+   	
+   	while (1) {
+                readLine(file);
+                wait_rest_of_period(&pinfo);
+                printf("Test1\n");
+       }	
+       
+       return NULL;
+   	
+}
+
+void *threadFunction2(void *args)
+{
+	struct Args* arg_funct = (struct Args*) args;
+	struct period_info pinfo;
+	
+	periodic_task_init2(&pinfo);
+	
+	//opening file
+	printf("filename = %s\n", arg_funct->filename);
+	FILE *file = fopen(arg_funct->filename, "r");
+	if (file == NULL) {
+       		printf("Error: file pointer is null.");
+       		exit(1);
+   	}
+   	
+   	while (1) {
+                readLine(file);
+                wait_rest_of_period(&pinfo);
+                printf("Test 2\n");
+       }	
+       
+       return NULL;
+}
+
+//waiting for rest of period of function
+static void wait_rest_of_period(struct period_info *pinfo)
+{
+        inc_period(pinfo);
+ 
+        /* for simplicity, ignoring possibilities of signal wakes */
+        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &pinfo->next_period, NULL);
+}
+
+//initializing a periodic task
+static void periodic_task_init(struct period_info *pinfo)
+{
+        /* for simplicity, hardcoding a 1ms period */
+        pinfo->period_ns = 1000000000;
+ 
+        clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
+}
+
+//initializing a periodic task
+static void periodic_task_init2(struct period_info *pinfo)
+{
+        /* for simplicity, hardcoding a 1ms period */
+        pinfo->period_ns = 1000000000;
+ 
+        clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
+}
+
+void *threadFunction3(void *args)
+{
+	struct Args* arg_funct = (struct Args*) args;
+	struct period_info pinfo;
+	
+	periodic_task_init2(&pinfo);
+   	
+   	while (1) {
+                buffer_to_global(args);
+                arg_funct->row++;
+                wait_rest_of_period(&pinfo);
+                printf("Test 3\n");
+                print(global);
+       }	
+       
+       return NULL;
+   	
+}
+
+//incrementing period
+static void inc_period(struct period_info *pinfo) 
+{
+        pinfo->next_period.tv_nsec += pinfo->period_ns;
+ 
+        while (pinfo->next_period.tv_nsec >= 1000000000) {
+                /* timespec nsec overflow */
+                pinfo->next_period.tv_sec++;
+                pinfo->next_period.tv_nsec -= 1000000000;
+        }
+}
+
+//reads line from file, for threads one and two
+void *readLine(FILE * fp)
+{	
+	FILE * file = fp;
     	//line buffer
    	 int maximumLineLength = 128;
    	 char *lineBuffer = (char *)malloc(sizeof(char) * maximumLineLength);
@@ -103,7 +197,6 @@ void *readLine(void * fp)
     	strncpy(line, lineBuffer, (count + 1));
     	free(lineBuffer);
     	const char *constLine = line;
-    	//return constLine;
     	//writing to global buffer
     	strncpy(buffer, constLine, (count+1));
 }

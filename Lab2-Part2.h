@@ -1,6 +1,7 @@
 //Lab 2 week 2 header file
 
 #include<stdio.h>
+#include<limits.h>
 #include<pthread.h>
 #include<stdlib.h>
 #include<string.h>
@@ -24,9 +25,22 @@ char buffer[256]; //256 chars per line
 struct Args {
 	int row;
 	int size;
+	char filename[30];
+};
+
+struct period_info {
+        struct timespec next_period;
+        long period_ns;
 };
 
 //declarations
-void *readLine(void *fp);
+void *readLine(FILE * fp);
+void *threadFunction(void *args);
+void *threadFunction2(void *args);
+void *threadFunction3(void *args);
 void *buffer_to_global(void * args);
 void print(char (*a)[128]);
+static void wait_rest_of_period(struct period_info *pinfo);
+static void periodic_task_init(struct period_info *pinfo);
+static void periodic_task_init2(struct period_info *pinfo);
+static void inc_period(struct period_info *pinfo);
