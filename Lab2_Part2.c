@@ -21,13 +21,17 @@ void main()
 	
 	struct sched_param param;
    	
-	ret = sched_setscheduler(threads[0], SCHED_FIFO, &param);	// this function has a return value
-	ret = sched_setscheduler(threads[1], SCHED_FIFO, &param);	// this function has a return value
-	ret = sched_setscheduler(&threads[2], SCHED_FIFO, &param);	// this function has a return value
+	/*ret = sched_setscheduler(&threads[0], SCHED_FIFO, &param);	// this function has a return value
+	ret = sched_setscheduler(&threads[1], SCHED_FIFO, &param);	// this function has a return value
 	if(ret == -1)
 	{
 		printf("Error with scheduler\n");
 	}
+	ret = sched_setscheduler(&threads[2], SCHED_FIFO, &param);	// this function has a return value
+	if(ret == -1)
+	{
+		printf("Error with scheduler\n");
+	}*/
    
 	ret = pthread_create(&threads[0], NULL, threadFunction, (void*) argsFirst);
 	if(ret)
@@ -35,9 +39,9 @@ void main()
 		printf("create pthread failed horribly\n");
 		return;
 	}
-	ret = pthread_create(&threads[2], NULL, threadFunction3, (void*) argsThird);
+
 	ret = pthread_create(&threads[1], NULL, threadFunction2, (void*) argsSecond);
-   	 
+   	ret = pthread_create(&threads[2], NULL, threadFunction3, (void*) argsThird);
    	ret = pthread_join(threads[0], NULL);
    	if(ret)
    		printf("join thread failed more horribly\n");
@@ -56,6 +60,13 @@ void main()
 //function of real periodic task
 void *threadFunction(void *args)
 {
+	struct sched_param param;
+	int ret = sched_setscheduler(pthread_self(), SCHED_FIFO, &param);	// this function has a return value
+	if(ret == -1)
+	{
+		printf("Error with scheduler\n");
+	}
+	
 	struct Args* arg_funct = (struct Args*) args;
 	struct period_info pinfo;
 	
@@ -81,6 +92,12 @@ void *threadFunction(void *args)
 
 void *threadFunction2(void *args)
 {
+		struct sched_param param;
+	int ret = sched_setscheduler(pthread_self(), SCHED_FIFO, &param);	// this function has a return value
+	if(ret == -1)
+	{
+		printf("Error with scheduler\n");
+	}
 	struct Args* arg_funct = (struct Args*) args;
 	struct period_info pinfo;
 	
@@ -116,7 +133,7 @@ static void wait_rest_of_period(struct period_info *pinfo)
 static void periodic_task_init(struct period_info *pinfo)
 {
         /* for simplicity, hardcoding a 1ms period */
-        pinfo->period_ns = 1000000000;
+        pinfo->period_ns = 2000000000;
  
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
@@ -125,17 +142,31 @@ static void periodic_task_init(struct period_info *pinfo)
 static void periodic_task_init2(struct period_info *pinfo)
 {
         /* for simplicity, hardcoding a 1ms period */
-        pinfo->period_ns = 1000000000;
+        pinfo->period_ns = 2000000000;
+ 
+        clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
+}
+
+static void periodic_task_init3(struct period_info *pinfo)
+{
+        /* for simplicity, hardcoding a 1ms period */
+        pinfo->period_ns = 3000000000;
  
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
 
 void *threadFunction3(void *args)
 {
+		struct sched_param param;
+	int ret = sched_setscheduler(pthread_self(), SCHED_FIFO, &param);	// this function has a return value
+	if(ret == -1)
+	{
+		printf("Error with scheduler\n");
+	}
 	struct Args* arg_funct = (struct Args*) args;
 	struct period_info pinfo;
 	
-	periodic_task_init2(&pinfo);
+	periodic_task_init3(&pinfo);
    	
    	while (1) {
                 buffer_to_global(args);

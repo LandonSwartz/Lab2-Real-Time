@@ -43,4 +43,5 @@ void print(char (*a)[128]);
 static void wait_rest_of_period(struct period_info *pinfo);
 static void periodic_task_init(struct period_info *pinfo);
 static void periodic_task_init2(struct period_info *pinfo);
+static void periodic_task_init3(struct period_info *pinfo);
 static void inc_period(struct period_info *pinfo);
